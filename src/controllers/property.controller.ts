@@ -1,7 +1,7 @@
-// backend/src/controllers/property.controller.ts
 import { Request, Response } from 'express';
 import { Property } from '../models/property.model';
 import mongoose from 'mongoose';
+import { User } from '../models/user.model';
 
 export const createProperty = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -71,6 +71,7 @@ export const createProperty = async (req: Request, res: Response): Promise<void>
 export const getPublicProperties = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tenantId } = req.params;
+        const { search, city, type, purpose, minPrice, maxPrice } = req.query;
         const query: any = { status: 'AVAILABLE' };
 
         if (tenantId) {
@@ -78,6 +79,53 @@ export const getPublicProperties = async (req: Request, res: Response): Promise<
             query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
                 ? new mongoose.Types.ObjectId(singleTenantId)
                 : singleTenantId;
+        }
+
+        if (city) {
+            query['location.city'] = new RegExp(String(city), 'i');
+        }
+
+        if (type) {
+            query.type = type;
+        }
+
+        if (purpose) {
+            query.purpose = purpose;
+        }
+
+        if (minPrice || maxPrice) {
+            query.price = {};
+            if (minPrice) query.price.$gte = Number(minPrice);
+            if (maxPrice) query.price.$lte = Number(maxPrice);
+        }
+
+        if (search) {
+            const searchRegex = new RegExp(String(search), 'i');
+
+            const matchingBrokers = await User.find({
+                $or: [
+                    { name: searchRegex },
+                    { creci: searchRegex }
+                ]
+            }).select('_id');
+            const brokerIds = matchingBrokers.map(b => b._id);
+
+            query.$or = [
+                { title: searchRegex },
+                { description: searchRegex },
+                { 'location.street': searchRegex },
+                { 'location.neighborhood': searchRegex },
+                { 'location.city': searchRegex },
+                { 'location.state': searchRegex },
+                { 'location.cep': searchRegex },
+                { type: searchRegex },
+                { purpose: searchRegex },
+                { amenities: searchRegex }
+            ];
+
+            if (brokerIds.length > 0) {
+                query.$or.push({ brokerId: { $in: brokerIds } });
+            }
         }
 
         const properties = await Property.find(query)
