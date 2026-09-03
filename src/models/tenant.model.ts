@@ -1,4 +1,11 @@
+// backend/src/models/tenant.model.ts
 import { Schema, model, Document } from 'mongoose';
+
+export interface ITenantImage {
+  url: string;
+  isCover: boolean;
+  order: number;
+}
 
 export interface ITenant extends Document {
   name: string;
@@ -6,6 +13,7 @@ export interface ITenant extends Document {
   cnpj: string;
   creci: string;
   logoUrl?: string;
+  images: ITenantImage[];
   domain?: string;
   settings: {
     primaryColor: string;
@@ -22,6 +30,11 @@ const TenantSchema = new Schema<ITenant>({
   cnpj: { type: String, required: true, unique: true },
   creci: { type: String, required: true },
   logoUrl: { type: String },
+  images: [{
+    url: { type: String, required: true },
+    isCover: { type: Boolean, default: false },
+    order: { type: Number, default: 0 }
+  }],
   domain: { type: String },
   settings: {
     primaryColor: { type: String, default: '#2563eb' },

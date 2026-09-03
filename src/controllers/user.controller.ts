@@ -1,3 +1,4 @@
+// backend/src/controllers/user.controller.ts
 import { Request, Response } from 'express';
 import { User } from '../models/user.model';
 import bcrypt from 'bcryptjs';
@@ -5,14 +6,14 @@ import mongoose from 'mongoose';
 
 export const createBroker = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tenantId, name, email, password, creci, phone, bio, role, requesterRole } = req.body;
+        const { tenantId, name, email, password, creci, phone, bio, role, requesterRole, avatarUrl: bodyAvatarUrl } = req.body;
 
         if (requesterRole && requesterRole !== 'ADMIN' && requesterRole !== 'SUPER_ADMIN') {
             res.status(403).json({ error: 'Acesso negado. Apenas administradores podem cadastrar corretores.' });
             return;
         }
 
-        const avatarUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+        const avatarUrl = req.file ? `/uploads/${req.file.filename}` : bodyAvatarUrl;
 
         const userExists = await User.findOne({ email });
         if (userExists) {
@@ -32,7 +33,8 @@ export const createBroker = async (req: Request, res: Response): Promise<void> =
             phone,
             avatarUrl,
             bio,
-            role: role || 'BROKER'
+            role: role || 'BROKER',
+            status: 'ACTIVE'
         });
 
         await user.save();
@@ -44,6 +46,7 @@ export const createBroker = async (req: Request, res: Response): Promise<void> =
             creci: user.creci,
             phone: user.phone,
             role: user.role,
+            status: user.status,
             avatarUrl: user.avatarUrl
         });
     } catch (error: any) {
@@ -54,7 +57,12 @@ export const createBroker = async (req: Request, res: Response): Promise<void> =
 export const getBrokersByTenant = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tenantId } = req.params;
-        const query: any = { status: 'ACTIVE' };
+        const { role } = req.query;
+        const query: any = {};
+
+        if (role !== 'SUPER_ADMIN') {
+            query.status = 'ACTIVE';
+        }
 
         if (tenantId) {
             const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
@@ -89,7 +97,7 @@ export const updateBroker = async (req: Request, res: Response): Promise<void> =
 
         const broker = await User.findByIdAndUpdate(id, updateData, { new: true }).select('-passwordHash');
         if (!broker) {
-            res.status(404).json({ error: 'Corretor não encontrado.' });
+            res.status(404).json({ error: 'Usuário não encontrado.' });
             return;
         }
         res.status(200).json(broker);

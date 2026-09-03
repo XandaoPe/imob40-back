@@ -1,9 +1,10 @@
+// backend/src/controllers/tenant.controller.ts
 import { Request, Response } from 'express';
 import { Tenant } from '../models/tenant.model';
 
 export const createTenant = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, tradeName, cnpj, creci, domain, settings } = req.body;
+        const { name, tradeName, cnpj, creci, domain, settings, images } = req.body;
         const logoUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
 
         const tenantExists = await Tenant.findOne({ cnpj });
@@ -12,12 +13,28 @@ export const createTenant = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
+        let parsedImages = images;
+        if (typeof images === 'string') {
+            parsedImages = JSON.parse(images);
+        }
+
+        const formattedImages = Array.isArray(parsedImages) ? parsedImages.map((img: any, idx: number) => ({
+            url: img.url,
+            isCover: img.isCover !== undefined ? img.isCover : (idx === 0),
+            order: img.order !== undefined ? img.order : idx
+        })) : [];
+
+        if (formattedImages.length > 0 && !formattedImages.some((img: any) => img.isCover)) {
+            formattedImages[0].isCover = true;
+        }
+
         const tenant = new Tenant({
             name,
             tradeName,
             cnpj,
             creci,
             logoUrl,
+            images: formattedImages,
             domain,
             settings: settings ? JSON.parse(settings) : undefined
         });
@@ -53,6 +70,19 @@ export const updateTenant = async (req: Request, res: Response): Promise<void> =
         }
         if (updateData.settings && typeof updateData.settings === 'string') {
             updateData.settings = JSON.parse(updateData.settings);
+        }
+        if (updateData.images && typeof updateData.images === 'string') {
+            updateData.images = JSON.parse(updateData.images);
+        }
+        if (updateData.images && Array.isArray(updateData.images)) {
+            updateData.images = updateData.images.map((img: any, index: number) => ({
+                url: img.url,
+                isCover: img.isCover !== undefined ? img.isCover : (index === 0),
+                order: img.order !== undefined ? img.order : index
+            }));
+            if (updateData.images.length > 0 && !updateData.images.some((img: any) => img.isCover)) {
+                updateData.images[0].isCover = true;
+            }
         }
 
         const tenant = await Tenant.findByIdAndUpdate(id, updateData, { new: true });

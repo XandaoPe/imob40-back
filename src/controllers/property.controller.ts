@@ -1,3 +1,4 @@
+// backend/src/controllers/property.controller.ts
 import { Request, Response } from 'express';
 import { Property } from '../models/property.model';
 import mongoose from 'mongoose';
@@ -144,11 +145,23 @@ export const getPropertiesByTenant = async (req: Request, res: Response): Promis
         const { role } = req.query;
 
         let query: any = {};
-        if (role !== 'SUPER_ADMIN' && tenantId) {
-            const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
-            query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
-                ? new mongoose.Types.ObjectId(singleTenantId)
-                : singleTenantId;
+        if (role === 'SUPER_ADMIN') {
+            if (tenantId && tenantId !== 'all') {
+                const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
+                query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
+                    ? new mongoose.Types.ObjectId(singleTenantId)
+                    : singleTenantId;
+            }
+        } else {
+            if (tenantId) {
+                const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
+                query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
+                    ? new mongoose.Types.ObjectId(singleTenantId)
+                    : singleTenantId;
+            }
+            if (role !== 'ADMIN') {
+                query.status = 'AVAILABLE';
+            }
         }
 
         const properties = await Property.find(query).populate('brokerId', 'name phone email creci');

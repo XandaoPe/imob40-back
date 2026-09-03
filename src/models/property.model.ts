@@ -44,11 +44,11 @@ export interface IProperty extends Document {
   };
   amenities: string[];
   images: {
-    url: string; // Armazenará a string Base64 compactada
+    url: string;
     isCover: boolean;
     order: number;
   }[];
-  status: 'AVAILABLE' | 'RESERVED' | 'SOLD' | 'INACTIVE';
+  status: 'AVAILABLE' | 'SOLD' | 'RENTED' | 'INACTIVE';
   changeLogs: IPropertyChangeLog[];
   createdAt: Date;
   updatedAt: Date;
@@ -90,7 +90,7 @@ const PropertySchema = new Schema<IProperty>({
     isCover: { type: Boolean, default: false },
     order: { type: Number, default: 0 }
   }],
-  status: { type: String, enum: ['AVAILABLE', 'RESERVED', 'SOLD', 'INACTIVE'], default: 'AVAILABLE' },
+  status: { type: String, enum: ['AVAILABLE', 'SOLD', 'RENTED', 'INACTIVE'], default: 'AVAILABLE' },
   changeLogs: [{
     date: { type: Date, default: Date.now },
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
