@@ -55,14 +55,9 @@ export const createBroker = async (req: Request, res: Response): Promise<void> =
 export const getBrokersByTenant = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tenantId } = req.params;
-        const { role } = req.query;
         const query: any = {};
 
-        if (role !== 'SUPER_ADMIN') {
-            query.status = 'ACTIVE';
-        }
-
-        if (tenantId) {
+        if (tenantId && tenantId !== 'all') {
             const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
             query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
                 ? new mongoose.Types.ObjectId(singleTenantId)

@@ -142,26 +142,13 @@ export const getPublicProperties = async (req: Request, res: Response): Promise<
 export const getPropertiesByTenant = async (req: Request, res: Response): Promise<void> => {
     try {
         const { tenantId } = req.params;
-        const { role } = req.query;
+        const query: any = {};
 
-        let query: any = {};
-        if (role === 'SUPER_ADMIN') {
-            if (tenantId && tenantId !== 'all') {
-                const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
-                query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
-                    ? new mongoose.Types.ObjectId(singleTenantId)
-                    : singleTenantId;
-            }
-        } else {
-            if (tenantId) {
-                const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
-                query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
-                    ? new mongoose.Types.ObjectId(singleTenantId)
-                    : singleTenantId;
-            }
-            if (role !== 'ADMIN') {
-                query.status = 'AVAILABLE';
-            }
+        if (tenantId && tenantId !== 'all') {
+            const singleTenantId = typeof tenantId === 'string' ? tenantId : tenantId[0];
+            query.tenantId = mongoose.Types.ObjectId.isValid(singleTenantId)
+                ? new mongoose.Types.ObjectId(singleTenantId)
+                : singleTenantId;
         }
 
         const properties = await Property.find(query).populate('brokerId', 'name phone email creci');
