@@ -6,14 +6,12 @@ import mongoose from 'mongoose';
 
 export const createBroker = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tenantId, name, email, password, creci, phone, bio, role, requesterRole, avatarUrl: bodyAvatarUrl } = req.body;
+        const { tenantId, name, email, password, creci, phone, bio, role, requesterRole, avatarUrl } = req.body;
 
         if (requesterRole && requesterRole !== 'ADMIN' && requesterRole !== 'SUPER_ADMIN') {
             res.status(403).json({ error: 'Acesso negado. Apenas administradores podem cadastrar corretores.' });
             return;
         }
-
-        const avatarUrl = req.file ? `/uploads/${req.file.filename}` : bodyAvatarUrl;
 
         const userExists = await User.findOne({ email });
         if (userExists) {
@@ -31,7 +29,7 @@ export const createBroker = async (req: Request, res: Response): Promise<void> =
             passwordHash,
             creci,
             phone,
-            avatarUrl,
+            avatarUrl: avatarUrl || '',
             bio,
             role: role || 'BROKER',
             status: 'ACTIVE'
@@ -83,9 +81,6 @@ export const updateBroker = async (req: Request, res: Response): Promise<void> =
         const { id } = req.params;
         const updateData: any = { ...req.body };
 
-        if (req.file) {
-            updateData.avatarUrl = `/uploads/${req.file.filename}`;
-        }
         if (updateData.password) {
             const salt = await bcrypt.genSalt(10);
             updateData.passwordHash = await bcrypt.hash(updateData.password, salt);
