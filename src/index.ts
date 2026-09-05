@@ -10,6 +10,7 @@ import propertyRoutes from './routes/property.routes';
 import authRoutes from './routes/auth.routes';
 import superAdminRoutes from './routes/superAdmin.routes';
 import crmRoutes from './routes/crm.routes';
+import clientRoutes from './routes/client.routes';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/v1/properties', propertyRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/super-admin', superAdminRoutes);
 app.use('/api/v1/crm', crmRoutes);
+app.use('/api/v1/clients', clientRoutes);
 
 app.get('/api/v1/health', (req: Request, res: Response) => {
     res.status(200).json({ status: 'OK', message: 'API do Sistema Imobiliário rodando com sucesso!' });

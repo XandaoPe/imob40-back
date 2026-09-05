@@ -27,6 +27,7 @@ export interface IDeal extends Document {
     };
     documents: { name: string; url: string; uploadedAt: Date }[];
     notes?: string;
+    clientId?: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -65,7 +66,8 @@ const DealSchema = new Schema<IDeal>({
         url: String,
         uploadedAt: { type: Date, default: Date.now }
     }],
-    notes: { type: String, trim: true }
+    notes: { type: String, trim: true },
+    clientId: { type: Schema.Types.ObjectId, ref: 'Client' }
 }, { timestamps: true });
 
 export const Deal = model<IDeal>('Deal', DealSchema);

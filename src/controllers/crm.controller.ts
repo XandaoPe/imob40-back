@@ -3,10 +3,11 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { Deal } from '../models/deal.model';
 import { Property } from '../models/property.model';
+import { Client } from '../models/client.model';
 
 export const createDeal = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tenantId, propertyId, brokerId, agreedPrice, commissionRate, stage, type, closingDate, ...rest } = req.body;
+        const { tenantId, propertyId, brokerId, agreedPrice, commissionRate, stage, type, closingDate, clientId, ...rest } = req.body;
 
         const rate = commissionRate || 6;
         const commissionAmount = (agreedPrice * rate) / 100;
@@ -17,6 +18,7 @@ export const createDeal = async (req: Request, res: Response): Promise<void> => 
             tenantId: new Types.ObjectId(tenantId),
             propertyId: new Types.ObjectId(propertyId),
             brokerId: new Types.ObjectId(brokerId),
+            clientId: clientId ? new Types.ObjectId(clientId) : undefined,
             agreedPrice,
             commissionRate: rate,
             commissionAmount,
@@ -31,6 +33,20 @@ export const createDeal = async (req: Request, res: Response): Promise<void> => 
         if (stage === 'CLOSED_WON') {
             const newPropertyStatus = type === 'SALE' ? 'SOLD' : 'RENTED';
             await Property.findByIdAndUpdate(propertyId, { status: newPropertyStatus });
+
+            if (clientId) {
+                await Client.findByIdAndUpdate(clientId, {
+                    status: 'CLOSED_DEAL',
+                    $push: {
+                        history: {
+                            date: new Date(),
+                            action: 'NEGOCIO_FECHADO',
+                            description: `Negócio fechado com sucesso no CRM (${type === 'SALE' ? 'Venda' : 'Locação'})`,
+                            brokerName: 'Sistema CRM'
+                        }
+                    }
+                });
+            }
         }
 
         res.status(201).json(savedDeal);
@@ -47,6 +63,7 @@ export const getDealsByTenant = async (req: Request, res: Response): Promise<voi
         const deals = await Deal.find({ tenantId: new Types.ObjectId(singleTenantId) })
             .populate('propertyId', 'title price location images type purpose status')
             .populate('brokerId', 'name email phone creci avatarUrl')
+            .populate('clientId', 'name email phone document')
             .sort({ createdAt: -1 });
         res.json(deals);
     } catch (error: any) {
@@ -59,6 +76,7 @@ export const getAllDealsGlobal = async (_req: Request, res: Response): Promise<v
         const deals = await Deal.find()
             .populate('propertyId', 'title price location images type purpose status')
             .populate('brokerId', 'name email phone creci avatarUrl')
+            .populate('clientId', 'name email phone document')
             .sort({ createdAt: -1 });
         res.json(deals);
     } catch (error: any) {
@@ -71,6 +89,10 @@ export const updateDeal = async (req: Request, res: Response): Promise<void> => 
         const { id } = req.params;
         const updateData = { ...req.body };
 
+        if (updateData.clientId) {
+            updateData.clientId = new Types.ObjectId(updateData.clientId);
+        }
+
         if (updateData.agreedPrice && updateData.commissionRate) {
             updateData.commissionAmount = (updateData.agreedPrice * updateData.commissionRate) / 100;
             updateData.brokerCommissionAmount = updateData.commissionAmount * 0.5;
@@ -82,7 +104,8 @@ export const updateDeal = async (req: Request, res: Response): Promise<void> => 
 
         const updatedDeal = await Deal.findByIdAndUpdate(id, updateData, { new: true })
             .populate('propertyId')
-            .populate('brokerId');
+            .populate('brokerId')
+            .populate('clientId');
 
         if (!updatedDeal) {
             res.status(404).json({ error: 'Negócio não encontrado.' });
@@ -93,6 +116,21 @@ export const updateDeal = async (req: Request, res: Response): Promise<void> => 
             const propId = (updatedDeal.propertyId as any)._id || updatedDeal.propertyId;
             const newPropertyStatus = updatedDeal.type === 'SALE' ? 'SOLD' : 'RENTED';
             await Property.findByIdAndUpdate(propId, { status: newPropertyStatus });
+
+            if (updatedDeal.clientId) {
+                const clientId = (updatedDeal.clientId as any)._id || updatedDeal.clientId;
+                await Client.findByIdAndUpdate(clientId, {
+                    status: 'CLOSED_DEAL',
+                    $push: {
+                        history: {
+                            date: new Date(),
+                            action: 'NEGOCIO_FECHADO',
+                            description: `Contrato fechado com sucesso no CRM`,
+                            brokerName: 'Sistema CRM'
+                        }
+                    }
+                });
+            }
         }
 
         res.json(updatedDeal);
